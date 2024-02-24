@@ -1,6 +1,7 @@
 import pygame
 import random
 import sys
+from tkinter import Tk, Scale, Button
 import math
 
 # Initialize Pygame
@@ -22,36 +23,65 @@ world_y1,world_ylen = screen_height/10, screen_height - 2*(screen_height/10)
 
 # Seperation
 
-
 # Dynamic constraints
+MAX_SPEED = 6
+MIN_SPEED = 3
+PROTECTED_RANGE = 8
+VISIBLE_RANGE = 40
+MAX_BIAS = 0.01
+
+turnfactor = 0.2
+avoidfactor = 0.03
+matchingfactor = 0.03
+centeringfactor = 0.005 
+bias_increment = 0.00004
 
 
 # Define Boid class
 class Boid:
     def __init__(self):
-        self.x = 1000 # random.randint(world_x1, world_x1+world_xlen)
-        self.y = 700 # random.randint(world_y1, world_y1+world_ylen)
-        self.v = 4 #random.randint(3,6)
-        self.theta = random.uniform(0, math.pi * 2)
-        self.phi = -math.atan2(screen_height/2 - self.y, self.x - screen_width/2)
-        print(self.x, self.y)
+        self.x = random.randint(world_x1, world_x1+world_xlen)
+        self.y = random.randint(world_y1, world_y1+world_ylen)
+        self.vx = random.randint(MIN_SPEED,MAX_SPEED)*[-1,1][random.randint(0,1)]
+        self.vy = random.randint(MIN_SPEED,MAX_SPEED)*[-1,1][random.randint(0,1)]
+        self.theta = math.atan2(self.vy, self.vx)
+        self.biasval = 0.001
+
+        self.scout_group = random.random()
+        if self.scout_group >=0.95:
+            self.scout_group = 1
+        elif self.scout_group <=0.5:
+            self.scout_group = 2
+        else:
+            self.scout_group = 0
 
     def update(self):
-        self.x += self.v * math.cos(self.theta)
-        self.y += self.v * math.sin(self.theta)
-        # self.theta = self.phi+math.pi/2
-        self.phi = -math.atan2(screen_height/2 - self.y, self.x - screen_width/2)
-        print(self.x, self.y)
+        speed = math.sqrt(self.vx*self.vx + self.vy*self.vy)
+        if self.scout_group == 1:
+            self.vx = (1 - self.biasval)*self.vx + (self.biasval * 1)
+        elif self.scout_group == 2:
+            self.vx = (1 - self.biasval)*self.vx + (self.biasval * -1)
 
+        self.x += self.vx
+        self.y += self.vy
+        self.theta = math.atan2(self.vy, self.vx)
+        
         # Wrap around screen edges
         if self.x < world_x1:
-            self.theta -= 0.1*(self.theta - self.phi + math.pi)
+            self.vx += turnfactor
         elif self.x > screen_width-world_x1:
-            self.theta -= 0.1*(self.theta - self.phi + math.pi)
+            self.vx -= turnfactor
         if self.y < world_y1:
-            self.theta -= 0.1*(self.theta - self.phi + math.pi)
+            self.vy += turnfactor
         elif self.y > screen_height-world_y1:
-            self.theta -= 0.1*(self.theta - self.phi + math.pi)
+            self.vy -= turnfactor
+
+        if speed>MAX_SPEED:
+            self.vx = (self.vx/speed)*MAX_SPEED
+            self.vy = (self.vy/speed)*MAX_SPEED
+        elif speed<MIN_SPEED:
+            self.vx = (self.vx/speed)*MIN_SPEED
+            self.vy = (self.vy/speed)*MIN_SPEED
 
     def draw(self):
         # Calculate vertices of the triangle
@@ -64,35 +94,14 @@ class Boid:
 
         # Draw the triangle
         pygame.draw.polygon(screen, WHITE, [(x1, y1), (x2, y2), (x3, y3)])
-
-               # Draw line from center to boid
-        pygame.draw.line(screen, RED, (screen_width // 2, screen_height // 2), (self.x, self.y))
-
-        # Calculate endpoint of line from boid in its direction
-        line_length = 20  # Adjust length of line as needed
-        end_x = self.x + line_length * math.cos(self.theta)
-        end_y = self.y + line_length * math.sin(self.theta)
-        
-        # Draw line from boid out in its direction
-        pygame.draw.line(screen, GREEN, (self.x, self.y), (end_x, end_y))
-
-        # Draw text displaying angle at the center of the screen
-        font = pygame.font.Font(None, 36)
-        angle_text = font.render(f"Angle: {math.degrees(self.phi):.2f}", True, WHITE)
-        angle_text_rect = angle_text.get_rect(center=(screen_width // 2, screen_height // 2))
-        screen.blit(angle_text, angle_text_rect)
-
-                # Draw text displaying angle next to the boid
-        font = pygame.font.Font(None, 24)
-        angle_text = font.render(f"{(math.degrees(self.theta))%360:.2f}°", True, WHITE)
-        angle_text_rect = angle_text.get_rect(center=(self.x + 20, self.y - 20))
-        screen.blit(angle_text, angle_text_rect)
-
+        # pygame.draw.circle(screen, GREEN, [self.x, self.y], VISIBLE_RANGE, 1)
+        # pygame.draw.circle(screen, RED, [self.x, self.y], PROTECTED_RANGE, 1)
 
 
 # Create initial set of boids
-num_boids = 1
+num_boids = 50
 boids = [Boid() for _ in range(num_boids)]
+
 
 # Main loop
 clock = pygame.time.Clock()
@@ -100,7 +109,6 @@ running = True
 while running:
     screen.fill((0, 0, 0))
 
-    # pygame.draw.rect(screen, WHITE, [(x1, y1), (x2, y2)])
     pygame.draw.rect(screen, WHITE, pygame.Rect(world_x1, world_y1, world_xlen, world_ylen), width=1)
 
     # Handle events
@@ -109,9 +117,36 @@ while running:
             running = False
 
     # Update boid positions
-    for boid in boids:
-        boid.update()
+    for boid1 in boids:
+        close_dx, close_dy = 0, 0
+        xvel_avg, yvel_avg, neighboring_boids = 0, 0, 0
+        xpos_avg, ypos_avg = 0,0 
 
+        for boid2 in boids:
+            if boid1 != boid2:
+                if math.dist([boid1.x,boid1.y],[boid2.x,boid2.y]) <= PROTECTED_RANGE:
+                    close_dx += boid1.x - boid2.x
+                    close_dy += boid1.y - boid2.y
+                if math.dist([boid1.x,boid1.y],[boid2.x,boid2.y]) <= VISIBLE_RANGE:
+                    xvel_avg += boid2.vx
+                    yvel_avg += boid2.vy
+                    xpos_avg += boid2.x
+                    ypos_avg += boid2.y
+                    neighboring_boids += 1
+                
+        if neighboring_boids > 0:
+            xvel_avg = xvel_avg/neighboring_boids
+            yvel_avg = yvel_avg/neighboring_boids
+            xpos_avg = xpos_avg/neighboring_boids
+            ypos_avg = ypos_avg/neighboring_boids
+            boid1.vx += (xpos_avg - boid1.x)*centeringfactor
+            boid1.vy += (ypos_avg - boid1.y)*centeringfactor    
+            boid1.vx += (xvel_avg - boid1.vx)*matchingfactor
+            boid1.vy += (yvel_avg - boid1.vy)*matchingfactor       
+
+        boid1.vx += close_dx*avoidfactor
+        boid1.vy += close_dy*avoidfactor
+        boid1.update()
     # Draw boids
     for boid in boids:
         boid.draw()
