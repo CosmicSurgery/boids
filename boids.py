@@ -4,39 +4,6 @@ import sys
 from tkinter import Tk, Scale, Button
 import math
 
-# Initialize Pygame
-pygame.init()
-
-# Set up the screen
-screen_width, screen_height = 1600, 900
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Boids Simulation")
-
-# Define colors
-WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-
-# World limits
-world_x1,world_xlen = screen_width/10, screen_width - 2*(screen_width/10)
-world_y1,world_ylen = screen_height/10, screen_height - 2*(screen_height/10)
-
-# Seperation
-
-# Dynamic constraints
-MAX_SPEED = 6
-MIN_SPEED = 3
-PROTECTED_RANGE = 8
-VISIBLE_RANGE = 40
-MAX_BIAS = 0.01
-
-turnfactor = 0.2
-avoidfactor = 0.03
-matchingfactor = 0.03
-centeringfactor = 0.005 
-bias_increment = 0.00004
-
-
 # Define Boid class
 class Boid:
     def __init__(self):
@@ -97,66 +64,129 @@ class Boid:
         # pygame.draw.circle(screen, GREEN, [self.x, self.y], VISIBLE_RANGE, 1)
         # pygame.draw.circle(screen, RED, [self.x, self.y], PROTECTED_RANGE, 1)
 
+def main():
+    # Initialize Pygame
+    pygame.init()
 
-# Create initial set of boids
-num_boids = 50
-boids = [Boid() for _ in range(num_boids)]
+    # Set up the screen
+    global screen_height
+    global screen_width
+    global screen
+
+    screen_width, screen_height = 1600, 900
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Boids Simulation")
+
+    # Define colors
+    global WHITE
+    global RED
+    global GREEN
+
+    WHITE = (255, 255, 255)
+    RED = (255, 0, 0)
+    GREEN = (0, 255, 0)
+
+    # World limits
+    global world_x1
+    global world_xlen
+    global world_y1
+    global world_ylen
 
 
-# Main loop
-clock = pygame.time.Clock()
-running = True
-while running:
-    screen.fill((0, 0, 0))
+    world_x1,world_xlen = screen_width/10, screen_width - 2*(screen_width/10)
+    world_y1,world_ylen = screen_height/10, screen_height - 2*(screen_height/10)
 
-    pygame.draw.rect(screen, WHITE, pygame.Rect(world_x1, world_y1, world_xlen, world_ylen), width=1)
+    # Seperation
 
-    # Handle events
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    # Dynamic constraints
+    global MAX_SPEED
+    global MIN_SPEED
+    global PROTECTED_RANGE
+    global VISIBLE_RANGE
+    global MAX_BIAS
+    
+    global turnfactor
+    global avoidfactor
+    global matchingfactor
+    global centeringfactor
+    global bias_increment
 
-    # Update boid positions
-    for boid1 in boids:
-        close_dx, close_dy = 0, 0
-        xvel_avg, yvel_avg, neighboring_boids = 0, 0, 0
-        xpos_avg, ypos_avg = 0,0 
 
-        for boid2 in boids:
-            if boid1 != boid2:
-                if math.dist([boid1.x,boid1.y],[boid2.x,boid2.y]) <= PROTECTED_RANGE:
-                    close_dx += boid1.x - boid2.x
-                    close_dy += boid1.y - boid2.y
-                if math.dist([boid1.x,boid1.y],[boid2.x,boid2.y]) <= VISIBLE_RANGE:
-                    xvel_avg += boid2.vx
-                    yvel_avg += boid2.vy
-                    xpos_avg += boid2.x
-                    ypos_avg += boid2.y
-                    neighboring_boids += 1
-                
-        if neighboring_boids > 0:
-            xvel_avg = xvel_avg/neighboring_boids
-            yvel_avg = yvel_avg/neighboring_boids
-            xpos_avg = xpos_avg/neighboring_boids
-            ypos_avg = ypos_avg/neighboring_boids
-            boid1.vx += (xpos_avg - boid1.x)*centeringfactor
-            boid1.vy += (ypos_avg - boid1.y)*centeringfactor    
-            boid1.vx += (xvel_avg - boid1.vx)*matchingfactor
-            boid1.vy += (yvel_avg - boid1.vy)*matchingfactor       
+    MAX_SPEED = 6
+    MIN_SPEED = 3
+    PROTECTED_RANGE = 8
+    VISIBLE_RANGE = 40
+    MAX_BIAS = 0.01
 
-        boid1.vx += close_dx*avoidfactor
-        boid1.vy += close_dy*avoidfactor
-        boid1.update()
-    # Draw boids
-    for boid in boids:
-        boid.draw()
+    turnfactor = 0.2
+    avoidfactor = 0.03
+    matchingfactor = 0.03
+    centeringfactor = 0.005 
+    bias_increment = 0.00004
 
-    # Update display
-    pygame.display.flip()
+    # Create initial set of boids
+    num_boids = 50
+    boids = [Boid() for _ in range(num_boids)]
 
-    # Cap the frame rate
-    clock.tick(60)
 
-# Clean up
-pygame.quit()
-sys.exit()
+    # Main loop
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        pygame.draw.rect(screen, WHITE, pygame.Rect(world_x1, world_y1, world_xlen, world_ylen), width=1)
+
+        # Handle events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        # Update boid positions
+        for boid1 in boids:
+            close_dx, close_dy = 0, 0
+            xvel_avg, yvel_avg, neighboring_boids = 0, 0, 0
+            xpos_avg, ypos_avg = 0,0 
+
+            for boid2 in boids:
+                if boid1 != boid2:
+                    if math.dist([boid1.x,boid1.y],[boid2.x,boid2.y]) <= PROTECTED_RANGE:
+                        close_dx += boid1.x - boid2.x
+                        close_dy += boid1.y - boid2.y
+                    if math.dist([boid1.x,boid1.y],[boid2.x,boid2.y]) <= VISIBLE_RANGE:
+                        xvel_avg += boid2.vx
+                        yvel_avg += boid2.vy
+                        xpos_avg += boid2.x
+                        ypos_avg += boid2.y
+                        neighboring_boids += 1
+                    
+            if neighboring_boids > 0:
+                xvel_avg = xvel_avg/neighboring_boids
+                yvel_avg = yvel_avg/neighboring_boids
+                xpos_avg = xpos_avg/neighboring_boids
+                ypos_avg = ypos_avg/neighboring_boids
+                boid1.vx += (xpos_avg - boid1.x)*centeringfactor
+                boid1.vy += (ypos_avg - boid1.y)*centeringfactor    
+                boid1.vx += (xvel_avg - boid1.vx)*matchingfactor
+                boid1.vy += (yvel_avg - boid1.vy)*matchingfactor       
+
+            boid1.vx += close_dx*avoidfactor
+            boid1.vy += close_dy*avoidfactor
+            boid1.update()
+        # Draw boids
+        for boid in boids:
+            boid.draw()
+
+        # Update display
+        pygame.display.flip()
+
+        # Cap the frame rate
+        clock.tick(60)
+
+    # Clean up
+    pygame.quit()
+    sys.exit()
+
+
+if __name__ == '__main__':
+    main()
