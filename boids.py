@@ -96,6 +96,10 @@ def main():
     world_x1,world_xlen = screen_width/10, screen_width - 2*(screen_width/10)
     world_y1,world_ylen = screen_height/10, screen_height - 2*(screen_height/10)
 
+    world_x1 = int(world_x1)
+    world_y1 = int(world_y1)
+    world_xlen = int(world_xlen)
+    world_ylen = int(world_ylen)
     # Seperation
 
     # Dynamic constraints
